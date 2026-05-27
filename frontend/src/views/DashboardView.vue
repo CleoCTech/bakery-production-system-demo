@@ -20,10 +20,10 @@ const ingredients = ref([
 
 <template>
     <div>
-    <h1>Baker's Dashboard</h1>
+    <h1 class="text-2xl font-bold">Baker's Dashboard</h1>
     <h2>Ingredient Stock</h2>
 
-    <div class="stock-grid">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <StockIndicator
         v-for="ing in ingredients"
         :key="ing.id"
@@ -39,10 +39,5 @@ const ingredients = ref([
 </template>
 
 <style scoped>
-.stock-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
+
 </style>
