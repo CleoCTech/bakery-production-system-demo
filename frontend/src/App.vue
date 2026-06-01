@@ -1,74 +1,30 @@
 <script setup>
-import { ref } from 'vue'
-
-
 </script>
 
 <template>
-<div class="app">
-  <nav class="navbar">
-        <div class="brand"> Bakery Production System</div>
-        <div class="nav-links">
-          <router-link to="/">Dashboard</router-link>
-          <router-link to="/products">Products</router-link>
-          <router-link to="/sales">Sales</router-link>
-          <router-link to="/login">Login</router-link>
-        </div>
-  </nav>
-  <!-- Page content renders here -->
-  <main class="content">
-    <router-view />
-  </main>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Navigation bar -->
+    <nav class="bg-[#1A1A2E] text-white px-4 sm:px-8 py-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between sm:items-center">
+      <span class="text-lg sm:text-xl font-bold">🍞 Bakery Production System</span>
+      <div class="flex flex-wrap gap-x-5 gap-y-2 text-sm sm:text-base">
+        <router-link to="/" class="text-gray-400 hover:text-[#E8541E] transition-colors">Dashboard</router-link>
+        <router-link to="/products" class="text-gray-400 hover:text-[#E8541E] transition-colors">Products</router-link>
+        <router-link to="/sales" class="text-gray-400 hover:text-[#E8541E] transition-colors">Sales</router-link>
+        <router-link to="/login" class="text-gray-400 hover:text-[#E8541E] transition-colors">Login</router-link>
+      </div>
+    </nav>
 
-</div>
+    <!-- Page content -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <router-view />
+    </main>
+  </div>
 </template>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
-}
-
-.navbar {
-  background-color: #1A1A2E;
-  color: white;
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.brand {
-  font-size: 1.3rem;
-  font-weight: bold;
-}
-
-.nav-links {
-  display: flex;
-  gap: 1.5rem;
-}
-
-.nav-links a {
-  color: #aaa;
-  text-decoration: none;
-  font-size: 0.95rem;
-}
-
-.nav-links a.router-link-active {
-  color: #E8541E;
-  font-weight: bold;
-}
-
-.content {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+/* Active router link styling — needs global CSS since Tailwind can't target dynamic classes easily */
+.router-link-active {
+  color: #E8541E !important;
+  font-weight: 600;
 }
 </style>
