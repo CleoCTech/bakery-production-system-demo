@@ -1,11 +1,41 @@
 <script setup>
 import { ref, computed } from 'vue'
 import StockIndicator from '../components/StockIndicator.vue'
+import BatchCard from '../components/BatchCard.vue'
 
 const ingredients = ref([
   { id: 1, name: 'Wheat Flour', current_stock: 50, reorder_level: 20, unit: 'kg', cost_per_unit: 100 },
   { id: 2, name: 'Cinnamon', current_stock: 0.4, reorder_level: 0.5, unit: 'kg', cost_per_unit: 1200 },
   { id: 3, name: 'Eggs', current_stock: 120, reorder_level: 50, unit: 'pcs', cost_per_unit: 15 },
+])
+
+// SAMPLE DATA: PRODUCTION_BATCHES
+
+// GET /api/production-batches response includes product_name from JOIN with PRODUCTS:
+
+const batches = ref([
+  {
+    id: 1,
+    product_name: 'White Bread',
+    product_id: 1,
+    planned_quantity: 50,
+    actual_quantity: 47,
+    wastage_quantity: 3,
+    status: 'done',
+    started_at: '2026-05-20 06:30',
+    completed_at: '2026-05-20 08:15'
+  },
+  {
+    id: 2,
+    product_name: 'Chocolate Cake',
+    product_id: 2,
+    planned_quantity: 30,
+    actual_quantity: null,
+    wastage_quantity: null,
+    status: 'mixing',
+    started_at: '2026-05-30 07:00',
+    completed_at: null
+  },
 ])
 
 const totalValue = computed(() =>
@@ -17,6 +47,21 @@ const needsReorder = computed(() =>
 const wellStocked = computed(() =>
   ingredients.value.filter(i => i.current_stock >= i.reorder_level).length
 )
+
+function advanceBatch(batchId, newStatus) {
+
+  const batch = batches.value.find(b => b.id === batchId)
+  if (batch) {
+    batch.status = newStatus  
+    if (newStatus === 'done') {
+      const now = new Date()
+      const pad = n => String(n).padStart(2, '0')
+      batch.completed_at = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+    }
+    // await axios.post(`/api/production-batches/${batchId}/advance`, { status: newStatus })
+    // this triggers DB::transaction() - stock deduction - cost recording
+  }
+}
 </script>
 
 <template>
@@ -63,6 +108,17 @@ const wellStocked = computed(() =>
         :reorder="ing.reorder_level"
         :unit="ing.unit"
         :cost-per-unit="ing.cost_per_unit"
+      />
+    </div>
+
+    <!-- Production batches -->
+    <h2 class="text-lg font-semibold text-[#1A1A2E] mb-3">Production Batches</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <BatchCard
+        v-for="batch in batches"
+        :key="batch.id"
+        :batch="batch"
+        @advance-batch="advanceBatch"
       />
     </div>
   </div>
