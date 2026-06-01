@@ -1,38 +1,13 @@
 <script setup>
 import { computed } from 'vue'
 
-// ---------------------------------------------------------------
-// PROPS: match INGREDIENTS table from the ERD
-//
-// In Week 6, the parent will get this data from:
-//   GET /api/ingredients
-// Response: [{ id, name, unit, current_stock, reorder_level, cost_per_unit }]
-//
-
-// We split the object into individual props here because this
-// component doesn't need the full ingredient object — just the
-// display-relevant fields. This is a design choice:
-// - Individual props = clearer API, easier to validate
-// - Object prop = simpler parent code, less verbose
-// Both are valid. We choose individual props for learning.
-// ---------------------------------------------------------------
 const props = defineProps({
-  name:    { type: String, required: true },        // INGREDIENTS.name - Wheat Flour
-  current: { type: Number, required: true },        // INGREDIENTS.current_stock -50
-  reorder: { type: Number, required: true },        // INGREDIENTS.reorder_level - 20
-  unit:    { type: String, default: 'kg' },         // INGREDIENTS.unit - kg
-  costPerUnit: { type: Number, default: 0 }         // INGREDIENTS.cost_per_unit -100
+  name:        { type: String, required: true },
+  current:     { type: Number, required: true },
+  reorder:     { type: Number, required: true },
+  unit:        { type: String, default: 'kg' },
+  costPerUnit: { type: Number, default: 0 }
 })
-
-// ---------------------------------------------------------------
-// COMPUTED: business logic for stock status
-//
-// These thresholds match the capstone business rules:
-// - Below reorder level → red, dashboard alert
-// - Reaches zero → production batches using it are blocked
-// - The 2× reorder threshold (warning) is our addition for
-//   early warning before it becomes critical.
-// ---------------------------------------------------------------
 
 const statusClass = computed(() => {
   if (props.current <= 0) return 'empty'
@@ -40,72 +15,82 @@ const statusClass = computed(() => {
   if (props.current < props.reorder * 2) return 'warning'
   return 'healthy'
 })
-// statusClass ='healthy' // for testing the different states
 
 const statusLabel = computed(() => {
-  const labels = {
-    empty: 'OUT OF STOCK',
-    danger: 'Below reorder level',
-    warning: 'Getting low',
-    healthy: 'Good'
-  }
+  const labels = { empty: 'OUT OF STOCK', danger: 'Below reorder', warning: 'Getting low', healthy: 'Good' }
   return labels[statusClass.value]
 })
-// statusLabel = 'Below reorder level' // for testing the different states
+
+const statusTextColor = computed(() => {
+  const colors = { empty: 'text-red-600', danger: 'text-red-600', warning: 'text-amber-600', healthy: 'text-emerald-600' }
+  return colors[statusClass.value]
+})
+
+const barColor = computed(() => {
+  const colors = { empty: 'bg-red-500', danger: 'bg-red-500', warning: 'bg-amber-500', healthy: 'bg-emerald-500' }
+  return colors[statusClass.value]
+})
+
+const borderColor = computed(() => {
+  const colors = { empty: 'border-red-500', danger: 'border-red-500', warning: 'border-amber-500', healthy: 'border-emerald-500' }
+  return colors[statusClass.value]
+})
+
+const barWidth = computed(() => {
+  const max = props.reorder * 3
+  return Math.min((props.current / max) * 100, 100)
+})
+
+const stockValue = computed(() => {
+  return (props.current * props.costPerUnit).toLocaleString()
+})
 </script>
 
 <template>
-
-<div class="stock-indicator" :class="'stock-' + statusClass">
-    <div class="stock-header">
+  <div
+    class="bg-white rounded-xl p-4 shadow-sm border-l-4 transition-colors"
+    :class="[borderColor, statusClass === 'empty' ? 'bg-red-50' : '']"
+  >
+    <!-- Header -->
+    <div class="flex justify-between items-start mb-2">
       <div>
-        <span class="ingredient-name">{{ name }}</span> --
-        <span class="stock-status" :class="statusClass">{{ statusLabel }}</span>
+        <span class="font-semibold text-[#1A1A2E] text-sm block">{{ name }}</span>
+        <span class="text-[0.65rem] font-semibold uppercase tracking-wide" :class="statusTextColor">
+          {{ statusLabel }}
+        </span>
       </div>
-      <span class="stock-amount">{{ current }} {{ unit }}</span>
+      <span class="text-lg font-bold text-[#1A1A2E]">{{ current }} {{ unit }}</span>
     </div>
 
-    <!-- Visual bar -->
-    <div class="bar-container">
+    <!-- Bar -->
+    <div class="w-full h-2 bg-gray-100 rounded-full overflow-visible relative my-2">
       <div
-        class="bar-fill"
-        :class="statusClass"
-        :style="{ width: barWidth + '%' }"
+        class="h-full rounded-full transition-all duration-400"
+        :class="barColor"
+        :style="{ width: (statusClass === 'empty' ? 2 : barWidth) + '%' }"
       ></div>
       <!-- Reorder level marker -->
       <div
-        class="reorder-marker"
-        :style="{ left: (props.reorder / (props.reorder * 3) * 100) + '%' }"
-        title="Reorder level"
+        class="absolute top-[-3px] w-0.5 h-3.5 bg-gray-600 rounded-sm"
+        :style="{ left: (reorder / (reorder * 3) * 100) + '%' }"
+        :title="'Reorder at ' + reorder + ' ' + unit"
       ></div>
     </div>
 
-    <!-- Details row -->
-    <div class="stock-details">
+    <!-- Details -->
+    <div class="flex justify-between text-xs text-gray-400 mt-1">
       <span>Reorder at: {{ reorder }} {{ unit }}</span>
       <span v-if="costPerUnit > 0">Value: KES {{ stockValue }}</span>
     </div>
 
-    <!-- Alert for low/empty stock -->
-    <p v-if="current < reorder && current > 0" class="alert-text">
+    <!-- Alerts -->
+    <p v-if="current < reorder && current > 0"
+       class="text-red-600 text-xs font-medium mt-2 bg-red-50 px-2 py-1 rounded">
       ⚠ Order {{ (reorder - current).toFixed(1) }} {{ unit }} to reach reorder level
     </p>
-    <p v-if="current <= 0" class="alert-text critical">
+    <p v-if="current <= 0"
+       class="text-white text-xs font-medium mt-2 bg-red-600 px-2 py-1 rounded">
       🚫 Production blocked — no stock available
     </p>
   </div>
-</template> 
-<style scoped>
-.stock-danger {
-  background-color: #a91010;
-}
-.stick-warning {
-  background-color: #e0a800;
-}
-.stock-healthy {
-  background-color: #28a745;
-}
-.stock-empty {
-  background-color: #6c757d;
-}
-</style>
+</template>
