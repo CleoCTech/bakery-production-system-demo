@@ -88,6 +88,12 @@ function handleAdvance() {
     emit('advance-batch', props.batch.id, nextStatus.value.next)
   }
 }
+
+// Mark a mixing/baking batch as failed — reuses the advance event with the
+// 'failed' status, which surfaces the red banner and hides the advance button.
+function handleFail() {
+  emit('advance-batch', props.batch.id, 'failed')
+}
 //data emission
 
 
@@ -160,6 +166,15 @@ function handleAdvance() {
              text-sm font-medium hover:bg-[#E8541E] transition-colors"
     >
     Click to  {{ nextStatus.icon }} {{ nextStatus.label }}
+    </button>
+
+    <!-- Mark failed (only while mixing or baking) -->
+    <button
+      v-if="batch.status === 'mixing' || batch.status === 'baking'"
+      @click="handleFail"
+      class="self-start text-xs font-medium text-red-500 hover:text-red-700 hover:underline transition-colors"
+    >
+      ❌ Mark Failed
     </button>
   </div>
 </template>
