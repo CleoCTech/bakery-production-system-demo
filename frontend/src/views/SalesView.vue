@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-
+import ProductCard from '../components/ProductCard.vue'
 // SAMPLE DATA: Products - this would normally come from an API call to /api/products
 
 const products = ref([
