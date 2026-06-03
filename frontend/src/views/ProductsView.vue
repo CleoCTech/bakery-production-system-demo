@@ -1,30 +1,24 @@
 <script setup>
 import { ref, computed } from 'vue'
 import ProductCard from '../components/ProductCard.vue'
+import { useProductStore } from '../stores/productStore'
 
-const products = ref([
-  { id: 1, name: 'White Bread', category: 'bread', selling_price: 60, shelf_life_hours: 24, unit: 'loaf', is_active: true },
-  { id: 2, name: 'Chocolate Cake', category: 'cake', selling_price: 350, shelf_life_hours: 72, unit: 'piece', is_active: true },
-  { id: 3, name: 'Mandazi', category: 'bun', selling_price: 10, shelf_life_hours: 12, unit: 'piece', is_active: true },
-])
+
+const productStore = useProductStore()
+
 
 const searchQuery = ref('')
 const selectedCategory = ref('all')
 
-const categories = computed(() => {
-  const cats = [...new Set(products.value.map(p => p.category))]
-  return ['all', ...cats.sort()]
-})
-
 const filteredProducts = computed(() => {
-  return products.value.filter(product => {
+  return productStore.products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     const matchesCategory = selectedCategory.value === 'all' || product.category === selectedCategory.value
     return matchesSearch && matchesCategory
   })
 })
 
-const activeCount = computed(() => products.value.filter(p => p.is_active).length)
+
 
 function handleSale(product) {
   alert(`Sale: ${product.name} for KES ${product.selling_price}`)
@@ -41,7 +35,7 @@ function handleViewRecipe(productId) {
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-[#1A1A2E]">Product Catalog</h1>
       <p class="text-gray-500 text-sm mt-1">
-        {{ filteredProducts.length }} of {{ products.length }} products ({{ activeCount }} active)
+        {{ filteredProducts.length }} of {{ productStore.products.length }} products ({{ productStore.activeProducts.length }} active)
       </p>
     </div>
 
@@ -64,7 +58,7 @@ function handleViewRecipe(productId) {
 
       <div class="flex flex-wrap gap-2">
         <button
-          v-for="cat in categories"
+          v-for="cat in productStore.categories"
           :key="cat"
           @click="selectedCategory = cat"
           class="px-3.5 py-1.5 rounded-full text-sm font-medium capitalize border transition-colors"

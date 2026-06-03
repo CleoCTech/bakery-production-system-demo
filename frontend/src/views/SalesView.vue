@@ -1,13 +1,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import ProductCard from '../components/ProductCard.vue'
+import { useProductStore } from '../stores/productStore'
 // SAMPLE DATA: Products - this would normally come from an API call to /api/products
 
-const products = ref([
-  { id: 1, name: 'White Bread', selling_price: 50 },
-  { id: 2, name: 'Chocolate Cake', selling_price: 200 },
-  { id: 3, name: 'Croissant', selling_price: 30 },
-])
+const productStore = useProductStore()
 
 // Form State for recording a new sale
 
@@ -21,7 +18,7 @@ const sales = ref([])
 // COMPUTED: find the selected product details based on selectedProductId
 
 const selectedProduct = computed(() => {
-  return products.value.find(p => p.id === selectedProductId.value) || null
+  return productStore.products.find(p => p.id === selectedProductId.value) || null
 })
 
 // COMPUTED: calculate total price based on selected product and quantity
@@ -95,10 +92,21 @@ function recordSale() {
                  focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 mb-4"
         >
           <option :value="null" disabled>Choose a product</option>
-          <option v-for="p in products" :key="p.id" :value="p.id">
+          <option v-for="p in productStore.products" :key="p.id" :value="p.id">
             {{ p.name }} — KES {{ p.selling_price }}
           </option>
         </select>
+
+           <!-- Product grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ProductCard
+            v-for="product in productStore.products"
+            :key="product.id"
+            :product="product"
+            @sell-product="handleSale"
+            @view-recipe="handleViewRecipe"
+          />
+        </div>
 
         <label class="block text-sm font-medium text-gray-600 mb-1">Quantity</label>
         <input
