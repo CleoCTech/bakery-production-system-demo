@@ -2,153 +2,18 @@
 import { ref, computed } from 'vue'
 import StockIndicator from '../components/StockIndicator.vue'
 import BatchCard from '../components/BatchCard.vue'
+import { useIngredientStore } from '../stores/ingredientStore'
+import { useBatchStore } from '../stores/batchStore'
+import { useProductStore } from '../stores/productStore'
 
-const ingredients = ref([
-  { id: 1, name: 'Wheat Flour', current_stock: 50, reorder_level: 20, unit: 'kg', cost_per_unit: 100 },
-  { id: 2, name: 'Cinnamon', current_stock: 0.4, reorder_level: 0.5, unit: 'kg', cost_per_unit: 1200 },
-  { id: 3, name: 'Eggs', current_stock: 120, reorder_level: 50, unit: 'pcs', cost_per_unit: 15 },
-])
 
-// SAMPLE DATA: PRODUCTION_BATCHES
+const ingredientStore = useIngredientStore()
+const batchStore = useBatchStore()
+const productStore = useProductStore()
 
-// GET /api/production-batches response includes product_name from JOIN with PRODUCTS:
 
-const batches = ref([
-  {
-    id: 1,
-    product_name: 'White Bread',
-    product_id: 1,
-    planned_quantity: 50,
-    actual_quantity: 47,
-    wastage_quantity: 3,
-    status: 'done',
-    started_at: '2026-05-20 06:30',
-    completed_at: '2026-05-20 08:15'
-  },
-  {
-    id: 2,
-    product_name: 'Chocolate Cake',
-    product_id: 2,
-    planned_quantity: 30,
-    actual_quantity: null,
-    wastage_quantity: null,
-    status: 'mixing',
-    started_at: '2026-05-30 07:00',
-    completed_at: null
-  },
-  {
-    id: 3,
-    product_name: 'Chocolate Cake',
-    product_id: 2,
-    planned_quantity: 20,
-    actual_quantity: 18,
-    wastage_quantity: 2,
-    status: 'done',
-    started_at: '2026-05-21 06:30',
-    completed_at: '2026-05-21 09:00'
-  },
-  {
-    id: 4,
-    product_name: 'Cinnamon Roll',
-    product_id: 5,
-    planned_quantity: 30,
-    actual_quantity: null,
-    wastage_quantity: 0,
-    status: 'planned',
-    started_at: null,
-    completed_at: null
-  },
-  {
-    id: 5,
-    product_name: 'White Bread',
-    product_id: 1,
-    planned_quantity: 50,
-    actual_quantity: 35,
-    wastage_quantity: 15,
-    status: 'done',
-    started_at: '2026-05-21 05:00',
-    completed_at: '2026-05-21 07:00'
-  },
-  {
-    id: 6,
-    product_name: 'Meat Pie',
-    product_id: 6,
-    planned_quantity: 40,
-    actual_quantity: null,
-    wastage_quantity: 0,
-    status: 'baking',
-    started_at: '2026-05-21 10:00',
-    completed_at: null
-  },
-])
 
-const totalValue = computed(() =>
-  ingredients.value.reduce((sum, i) => sum + i.current_stock * i.cost_per_unit, 0)
-)
-const needsReorder = computed(() =>
-  ingredients.value.filter(i => i.current_stock < i.reorder_level).length
-)
-const wellStocked = computed(() =>
-  ingredients.value.filter(i => i.current_stock >= i.reorder_level).length
-)
-// Batches actively being worked (not planned / done / failed)
-const inProgress = computed(() =>
-  batches.value.filter(b => ['mixing', 'baking', 'cooling'].includes(b.status)).length
-)
-// Completed batches that yielded under 80% of plan
-const lowYield = computed(() =>
-  batches.value.filter(b => {
-    if (!b.actual_quantity || !b.planned_quantity) return false
-    return (b.actual_quantity / b.planned_quantity) * 100 < 80
-  }).length
-)
 
-// --- Completion panel state (Task 3) ---
-const completingBatchId = ref(null)
-const completionForm = ref({ actual: null, wastage: 0 })
-const completingBatch = computed(() =>
-  batches.value.find(b => b.id === completingBatchId.value) || null
-)
-
-function formatNow() {
-  const now = new Date()
-  const pad = n => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
-}
-
-function advanceBatch(batchId, newStatus) {
-  const batch = batches.value.find(b => b.id === batchId)
-  if (!batch) return
-
-  // Marking a cooling batch done opens the completion panel instead of
-  // finishing immediately — the baker records actual output + wastage there.
-  if (newStatus === 'done') {
-    completingBatchId.value = batchId
-    completionForm.value = {
-      actual: batch.actual_quantity ?? batch.planned_quantity,
-      wastage: batch.wastage_quantity ?? 0
-    }
-    return
-  }
-
-  batch.status = newStatus
-  // await axios.post(`/api/production-batches/${batchId}/advance`, { status: newStatus })
-  // this triggers DB::transaction() - stock deduction - cost recording
-}
-
-function confirmCompletion() {
-  const batch = completingBatch.value
-  if (!batch) return
-  batch.actual_quantity = completionForm.value.actual
-  batch.wastage_quantity = completionForm.value.wastage
-  batch.status = 'done'
-  batch.completed_at = formatNow()
-  completingBatchId.value = null
-}
-
-function cancelCompletion() {
-  completingBatchId.value = null
-}
 </script>
 
 <template>
@@ -163,30 +28,37 @@ function cancelCompletion() {
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Inventory Value</p>
-        <p class="text-2xl font-bold text-[#1A1A2E] mt-1">KES {{ totalValue.toLocaleString() }}</p>
+        <p class="text-2xl font-bold text-[#1A1A2E] mt-1">KES {{ ingredientStore.totalValue }}</p>
       </div>
+     <div class="bg-white rounded-xl p-4 shadow-sm text-center">
+        <span class="block text-3xl font-bold text-[#1A1A2E]">{{ productStore.productCount }}</span>
+        <span class="text-sm text-gray-500">Products</span>
+      </div>
+
       <div
         class="bg-white rounded-xl p-4 shadow-sm border"
-        :class="needsReorder > 0 ? 'border-red-200 bg-red-50' : 'border-gray-100'"
+        :class="ingredientStore.lowStockCount > 0 ? 'border-red-200 bg-red-50' : 'border-gray-100'"
       >
         <p class="text-xs font-medium uppercase tracking-wide"
-           :class="needsReorder > 0 ? 'text-red-500' : 'text-gray-400'">
+           :class="ingredientStore.lowStockCount > 0 ? 'text-red-500' : 'text-gray-400'">
           Needs Reorder
         </p>
         <p class="text-2xl font-bold mt-1"
            :class="needsReorder > 0 ? 'text-red-600' : 'text-[#1A1A2E]'">
-          {{ needsReorder }}
+          {{ ingredientStore.lowStockCount }}  
         </p>
       </div>
+
+
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Well Stocked</p>
-        <p class="text-2xl font-bold text-emerald-600 mt-1">{{ wellStocked }}</p>
+        <p class="text-2xl font-bold text-emerald-600 mt-1">{{ ingredientStore.lowStockCount }}</p>
       </div>
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-xs font-medium uppercase tracking-wide text-gray-400">In Progress</p>
-        <p class="text-2xl font-bold text-blue-600 mt-1">{{ inProgress }}</p>
+        <p class="text-2xl font-bold text-blue-600 mt-1">{{ batchStore.inProgressCount }}</p>
       </div>
-      <div
+      <!-- <div
         class="bg-white rounded-xl p-4 shadow-sm border col-span-2 sm:col-span-1"
         :class="lowYield > 0 ? 'border-red-200 bg-red-50' : 'border-gray-100'"
       >
@@ -198,14 +70,14 @@ function cancelCompletion() {
            :class="lowYield > 0 ? 'text-red-600' : 'text-[#1A1A2E]'">
           {{ lowYield }}
         </p>
-      </div>
+      </div> -->
     </div>
 
     <!-- Ingredient stock -->
     <h2 class="text-lg font-semibold text-[#1A1A2E] mb-3">Ingredient Stock</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <StockIndicator
-        v-for="ing in ingredients"
+        v-for="ing in ingredientStore.ingredients"
         :key="ing.id"
         :name="ing.name"
         :current="ing.current_stock"
@@ -219,15 +91,15 @@ function cancelCompletion() {
     <h2 class="text-lg font-semibold text-[#1A1A2E] mt-8 mb-3">Production Batches</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <BatchCard
-        v-for="batch in batches"
+        v-for="batch in batchStore.batches"
         :key="batch.id"
         :batch="batch"
-        @advance-batch="advanceBatch"
+        @advance-batch="batchStore.advanceBatch"
       />
     </div>
 
     <!-- Completion panel (Task 3) -->
-    <div v-if="completingBatch"
+    <!-- <div v-if="completingBatch"
          class="mt-4 bg-white rounded-xl p-5 shadow-sm border border-blue-200">
       <h3 class="text-base font-semibold text-[#1A1A2E]">
         Complete batch — {{ completingBatch.product_name }}
@@ -276,6 +148,6 @@ function cancelCompletion() {
           Cancel
         </button>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
