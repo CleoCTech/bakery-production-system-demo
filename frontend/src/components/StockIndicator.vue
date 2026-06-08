@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { useStockStatus } from '@/composables/useStockStatus'
 
 const props = defineProps({
   name:        { type: String, required: true },
@@ -9,6 +10,10 @@ const props = defineProps({
   costPerUnit: { type: Number, default: 0 }
 })
 
+const { status, statusLabel, statusColor, barColor, borderColor, needsReorder, barWidth } = useStockStatus(toRef(props, 'current'), toRef(props, 'reorder'))
+
+const stockValue = (props.current * props.costPerUnit).toLocaleString()
+
 const statusClass = computed(() => {
   if (props.current <= 0) return 'empty'
   if (props.current < props.reorder) return 'danger'
@@ -16,34 +21,6 @@ const statusClass = computed(() => {
   return 'healthy'
 })
 
-const statusLabel = computed(() => {
-  const labels = { empty: 'OUT OF STOCK', danger: 'Below reorder', warning: 'Getting low', healthy: 'Good' }
-  return labels[statusClass.value]
-})
-
-const statusTextColor = computed(() => {
-  const colors = { empty: 'text-red-600', danger: 'text-red-600', warning: 'text-amber-600', healthy: 'text-emerald-600' }
-  return colors[statusClass.value]
-})
-
-const barColor = computed(() => {
-  const colors = { empty: 'bg-red-500', danger: 'bg-red-500', warning: 'bg-amber-500', healthy: 'bg-emerald-500' }
-  return colors[statusClass.value]
-})
-
-const borderColor = computed(() => {
-  const colors = { empty: 'border-red-500', danger: 'border-red-500', warning: 'border-amber-500', healthy: 'border-emerald-500' }
-  return colors[statusClass.value]
-})
-
-const barWidth = computed(() => {
-  const max = props.reorder * 3
-  return Math.min((props.current / max) * 100, 100)
-})
-
-const stockValue = computed(() => {
-  return (props.current * props.costPerUnit).toLocaleString()
-})
 </script>
 
 <template>
