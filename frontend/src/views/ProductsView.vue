@@ -71,16 +71,16 @@ function handleViewRecipe(productId) {
       </div>
     </div>
 
-    <!-- Product grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <ProductCard
-        v-for="product in filteredProducts"
-        :key="product.id"
-        :product="product"
-        @sell-product="handleSale"
-        @view-recipe="handleViewRecipe"
-      />
-    </div>
+      <!-- Product grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <ProductCard
+          v-for="product in filteredProducts"
+          :key="product.id"
+          :product="product"
+          @sell-product="handleSale"
+          @view-recipe="handleViewRecipe"
+        />
+      </div>
 
     <!-- Empty state -->
     <div v-if="filteredProducts.length === 0" class="text-center py-12 text-gray-400">
