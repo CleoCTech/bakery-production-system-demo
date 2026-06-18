@@ -33,5 +33,3 @@ Route::get('/health', function () {
 // PUT    /api/products/{id}     → ProductController@update
 // DELETE /api/products/{id}     → ProductController@destroy
 Route::apiResource('products', ProductController::class);
-
-
