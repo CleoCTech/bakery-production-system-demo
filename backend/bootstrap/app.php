@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         //
+         // This enables Sanctum's stateful authentication AND
+        // handles CORS automatically for the domains listed in sanctum.php
+        $middleware->statefulApi();
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
