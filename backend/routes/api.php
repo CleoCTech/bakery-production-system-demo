@@ -26,6 +26,9 @@ Route::get('/health', function () {
     ]);
 });
 
+// CORS = Cross-Origin Resource Sharing
+// This is handled in app/Http/Middleware/HandleCors.php and config/cors.php
+
 
 // RESTful resource routes — one line creates all CRUD endpoints:
 // GET    /api/products          → ProductController@index

@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { useStockStatus } from '@/composables/useStockStatus'
 
 const props = defineProps({
