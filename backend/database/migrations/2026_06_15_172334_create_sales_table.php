@@ -13,6 +13,13 @@ return new class extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('product_id')->constrained();
+            $table->integer('quantity');
+            $table->decimal('unit_price', 10, 2);
+            $table->decimal('total_amount', 10, 2);
+            $table->enum('payment_method', ['cash', 'mpesa']);
+            $table->string('mpesa_ref', 20)->nullable();     // required for mpesa only
+            $table->datetime('sold_at')->useCurrent();
             $table->timestamps();
         });
     }

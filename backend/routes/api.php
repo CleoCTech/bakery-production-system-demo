@@ -38,14 +38,20 @@ Route::get('/health', function () {
 
 // Public routes (no token needed)
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
 
 
 // Protected routes (token required)
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', [AuthController::class, 'me']);
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    // Only admins can create/update/delete products
     Route::apiResource('products', ProductController::class);
     // Add more protected routes here
 });
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [AuthController::class, 'me']);
+});
+
 
 
