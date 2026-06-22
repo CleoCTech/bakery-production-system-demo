@@ -19,7 +19,7 @@ import {ref, computed} from 'vue'
 export const useProductStore = defineStore('product', () => {
 
     // ==================== STATE ====================
-    // Same data shape as PRODUCTS table from the ERD
+    // Same data shape as PRODUCTS table from the ERD/database
     // fetchProducts() will replace this hardcoded data in Week 6
     const products = ref([
         { id: 1, name: 'White Bread', category: 'bread', selling_price: 60, shelf_life_hours: 24, unit: 'loaf', is_active: true },
