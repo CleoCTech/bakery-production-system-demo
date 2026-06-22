@@ -1,35 +1,49 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
 
-
+const authStore = useAuthStore()
 const router = useRouter()
 
 const email = ref('')
 const password = ref('')
-const role = ref('baker')
-const isLoading = ref(false)
-const errorMessage = ref('')
+const touched = ref({ email: false, password: false })
+
+const emailError = computed(() => {
+  if (!touched.value.email) return ''
+  if (!email.value) return 'Email is required'
+  if (!email.value.includes('@')) return 'Enter a valid email'
+  return ''
+})
+
+const passwordError = computed(() => {
+  if (!touched.value.password) return ''
+  if (!password.value) return 'Password is required'
+  if (password.value.length < 6) return 'Minimum 6 characters'
+  return ''
+})
+
+const isFormValid = computed(() =>
+  email.value && password.value.length >= 6 && !emailError.value && !passwordError.value
+)
+
+
+watch([email, password], () => {
+  authStore.error = null
+})
+
 
 async function handleLogin() {
-  errorMessage.value = ''
-  isLoading.value = true
+  touched.value = { email: true, password: true }
+  if (!isFormValid.value) return
 
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800))
-
-  // In Week 6:
-  // try {
-  //   const response = await axios.post('/api/login', { email, password })
-  //   authStore.setUser(response.data.user, response.data.token)
-  //   router.push('/')
-  // } catch (err) {
-  //   errorMessage.value = 'Invalid email or password'
-  // }
-
-  console.log(`Login: ${email.value} as ${role.value}`)
-  isLoading.value = false
-  router.push('/')
+  try {
+    await authStore.login(email.value, password.value)
+    // authStore.login handles navigation
+  } catch (err) {
+    // Error already set in authStore
+  }
 }
 
 
@@ -46,11 +60,12 @@ async function handleLogin() {
         <p class="text-gray-400 text-sm mt-1">Sign in to your account</p>
       </div>
 
-      <!-- Error banner -->
-      <div v-if="errorMessage"
-           class="bg-red-50 text-red-700 border-l-4 border-red-500 px-4 py-3 rounded-lg text-sm mb-4">
-        {{ errorMessage }}
-      </div>
+
+      <!-- Error banner — now from the auth store -->
+    <div v-if="authStore.error"
+        class="bg-red-50 text-red-700 border-l-4 border-red-500 px-4 py-3 rounded-lg text-sm mb-4">
+      {{ authStore.error }}
+    </div>
 
       <!-- Email -->
       <div class="mb-4">
@@ -59,7 +74,7 @@ async function handleLogin() {
           v-model="email"
           type="email"
           placeholder="baker@bakery.co.ke"
-          :disabled="isLoading"
+          :disabled="authStore.isLoading"
           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
                  focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100
                  disabled:bg-gray-50 disabled:text-gray-400 transition"
@@ -73,38 +88,22 @@ async function handleLogin() {
           v-model="password"
           type="password"
           placeholder="Enter your password"
-          :disabled="isLoading"
+          :disabled="authStore.isLoading"
           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
                  focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100
                  disabled:bg-gray-50 disabled:text-gray-400 transition"
         >
       </div>
 
-      <!-- Role selector -->
-      <div class="mb-6">
-        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Login as</label>
-        <select
-          v-model="role"
-          :disabled="isLoading"
-          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white
-                 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100
-                 disabled:bg-gray-50 disabled:text-gray-400 transition"
-        >
-          <option value="admin">👔 Admin (Owner/Manager)</option>
-          <option value="baker">👨‍🍳 Baker (Production)</option>
-          <option value="cashier">💰 Cashier (Sales)</option>
-        </select>
-      </div>
 
-      <!-- Submit -->
+      <!-- Submit button — uses store loading state -->
       <button
         @click="handleLogin"
-        :disabled="isLoading"
+        :disabled="authStore.isLoading || !isFormValid"
         class="w-full py-3 bg-[#1A1A2E] text-white rounded-lg font-semibold text-sm
-               hover:bg-[#E8541E] transition-colors
-               disabled:bg-gray-400 disabled:cursor-not-allowed"
+              hover:bg-[#E8541E] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer"
       >
-        {{ isLoading ? 'Signing in...' : 'Sign In' }}
+        {{ authStore.isLoading ? 'Signing in...' : 'Sign In' }}
       </button>
 
       <!-- STUDENTS: Add validation errors and extra features here -->
