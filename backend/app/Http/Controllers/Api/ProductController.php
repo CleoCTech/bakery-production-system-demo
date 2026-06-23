@@ -12,6 +12,7 @@ class ProductController extends Controller
     // GET /api/products — list all products
     public function index(Request $request)
     {
+        log::info('I have reached; Listing all products');
        // Eager-load category so each product includes its category name
        //$products = Product::all();
         $query = Product::with('category');

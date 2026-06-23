@@ -15,83 +15,88 @@
 
 import {defineStore} from 'pinia'
 import {ref, computed} from 'vue'
+import api from '../api/axios'  // Axios instance with baseURL and auth headers
+
 
 export const useProductStore = defineStore('product', () => {
 
-    // ==================== STATE ====================
-    // Same data shape as PRODUCTS table from the ERD/database
-    // fetchProducts() will replace this hardcoded data in Week 6
-    const products = ref([
-        { id: 1, name: 'White Bread', category: 'bread', selling_price: 60, shelf_life_hours: 24, unit: 'loaf', is_active: true },
-        { id: 2, name: 'Chocolate Cake', category: 'cake', selling_price: 350, shelf_life_hours: 72, unit: 'piece', is_active: true },
-        { id: 3, name: 'Cinnamon Roll', category: 'pastry', selling_price: 40, shelf_life_hours: 12, unit: 'piece', is_active: true },
-        { id: 4, name: 'Mandazi', category: 'bun', selling_price: 10, shelf_life_hours: 12, unit: 'piece', is_active: true },
-        { id: 5, name: 'Brown Bread', category: 'bread', selling_price: 65, shelf_life_hours: 24, unit: 'loaf', is_active: true },
-        { id: 6, name: 'Meat Pie', category: 'pastry', selling_price: 80, shelf_life_hours: 8, unit: 'piece', is_active: true },
-        { id: 7, name: 'Chapati', category: 'bread', selling_price: 20, shelf_life_hours: 8, unit: 'piece', is_active: true },
-    ])
+    // STATE
+  const products = ref([])     // ← was hardcoded, now starts EMPTY
+  const isLoading = ref(false)
+  const error = ref(null)
 
-    const isLoading = ref(false)
-    const error = ref(null)
+  // GETTERS (unchanged — they work on whatever data is in products)
+  const productCount = computed(() => products.value.length)
 
-    // ==================== GETTERS ====================
-    const productCount = computed(() => products.value.length)
+  const activeProducts = computed(() => products.value.filter(p => p.is_active))
 
-    const activeProducts = computed(() => products.value.filter(p => p.is_active))
+  const categories = computed(() => {
+    const cats = [...new Set(products.value.map(p => p.category?.name || 'uncategorized'))]
+    return cats.sort()
+  })
 
-    const categories = computed(() => {
-        const cats = [...new Set(products.value.map(p => p.category))]
-        return cats.sort()
-    })
+  // ==================== ACTIONS — NOW CALL THE API ====================
 
-    const totalCatalogValue = computed(() => {
-        return products.value.reduce((sum,p) => sum + p.selling_price, 0)
-    })
-
-
-    // ==================== ACTIONS ====================
-    function addProduct(newProduct) {
-        // In a real app, this would POST to the API and get back the created product with an ID
-        const newId = Math.max(...products.value.map(p => p.id)) + 1
-        products.value.push({...newProduct, id: newId})
+  // FETCH all products from database
+  async function fetchProducts() {
+    isLoading.value = true
+    error.value = null
+    try {
+      const response = await api.get('/products')
+      products.value = response.data
+    } catch (err) {
+      error.value = 'Failed to load products'
+      console.error('fetchProducts error:', err)
+    } finally {
+      isLoading.value = false
     }
+  }
 
-    function updateProduct(productId, updates) {
-        // Week 6: await axios.put(`/api/products/${productId}`, updates)
-        const product = products.value.find(p => p.id === productId)
-        if (product) Object.assign(product, updates)
+  // CREATE a new product
+  async function addProduct(productData) {
+    try {
+      const response = await api.post('/products', productData)
+      products.value.push(response.data)  // Add server response (has id, timestamps)
+      return response.data
+    } catch (err) {
+      // If validation fails, Laravel returns 422 with error details
+      if (err.response?.status === 422) {
+        throw err.response.data  // Pass validation errors to the component
+      }
+      throw err
     }
+  }
 
-    function toggleActive(productId) {
-        const product = products.value.find(p => p.id === productId)
-        if (product) product.is_active = !product.is_active
+  // UPDATE a product
+  async function updateProduct(productId, updates) {
+    try {
+      const response = await api.put(`/products/${productId}`, updates)
+      const index = products.value.findIndex(p => p.id === productId)
+      if (index !== -1) products.value[index] = response.data
+      return response.data
+    } catch (err) {
+      if (err.response?.status === 422) throw err.response.data
+      throw err
     }
+  }
 
-    function deleteProduct(productId) {
-        // Week 6: await axios.delete(`/api/products/${productId}`)
-        products.value = products.value.filter(p => p.id !== productId)
+  // DELETE a product
+  async function deleteProduct(productId) {
+    try {
+      await api.delete(`/products/${productId}`)
+      products.value = products.value.filter(p => p.id !== productId)
+    } catch (err) {
+      console.error('deleteProduct error:', err)
+      throw err
     }
-
-    // In Week 6, this replaces the hardcoded data:
-    // async function fetchProducts() {
-    //   isLoading.value = true
-    //   error.value = null
-    //   try {
-    //     const response = await axios.get('/api/products')
-    //     products.value = response.data
-    //   } catch (err) {
-    //     error.value = 'Failed to load products'
-    //   } finally {
-    //     isLoading.value = false
-    //   }
-    // }
+  }
 
     return {
         // State
         products, isLoading, error,
         // Getters
-        productCount, activeProducts, categories, totalCatalogValue,
+        productCount, activeProducts, categories,
         // Actions
-        addProduct, updateProduct, toggleActive,deleteProduct
+        addProduct, updateProduct,deleteProduct, fetchProducts
     }
 })

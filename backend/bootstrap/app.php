@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
          // This enables Sanctum's stateful authentication AND
         // handles CORS automatically for the domains listed in sanctum.php
         $middleware->statefulApi();
+
+        // Register the `role` alias so routes can use `role:admin`.
+        // Without this, Laravel treats `role` as a class name and throws
+        // "Target class [role] does not exist."
+        $middleware->alias([
+            'role' => CheckRole::class,
+        ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {

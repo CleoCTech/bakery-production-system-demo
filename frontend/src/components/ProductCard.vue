@@ -30,7 +30,7 @@ const categoryClass = computed(() => {
     pastry: 'bg-indigo-100 text-indigo-800',
     bun:    'bg-emerald-100 text-emerald-800',
   }
-  return colors[props.product.category] || 'bg-gray-100 text-gray-800'
+  return colors[props.product.category.name] || 'bg-gray-100 text-gray-800'
 })
 
 function handleSell() {
@@ -56,7 +56,7 @@ function handleViewRecipe() {
         class="px-3 py-0.5 rounded-full text-xs font-medium capitalize whitespace-nowrap"
         :class="categoryClass"
       >
-        {{ product.category }}
+        {{ product.category.name }}
       </span>
     </div>
 
