@@ -1,67 +1,62 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import api from '../api/axios'
 
-import { useIngredientStore } from './ingredientStore'
+export const useBatchStore = defineStore('batches', () => {
+  const batches = ref([])
+  const isLoading = ref(false)
+  const error = ref(null)
 
-export const useBatchStore = defineStore('batch', () => {
+  const totalBatches = computed(() => batches.value.length)
+  const doneBatches = computed(() => batches.value.filter(b => b.status === 'done').length)
+  const inProgressBatches = computed(() =>
+    batches.value.filter(b => ['mixing', 'baking', 'cooling'].includes(b.status)).length
+  )
 
-    //opening(instantiation) and then later assemble of imported car 
-    const ingredientStore = useIngredientStore()
-
-    // STATE: matches PRODUCTION_BATCHES table from ERD
-    const batches = ref([
-        {
-        id: 1, product_name: 'White Bread', product_id: 1,
-        planned_quantity: 50, actual_quantity: 47, wastage_quantity: 3,
-        status: 'done', started_at: '2026-05-20T06:00:00', completed_at: '2026-05-20T08:30:00'
-        },
-        {
-        id: 2, product_name: 'Mandazi', product_id: 4,
-        planned_quantity: 100, actual_quantity: null, wastage_quantity: 0,
-        status: 'mixing', started_at: '2026-05-20T09:00:00', completed_at: null
-        },
-        {
-        id: 3, product_name: 'Cinnamon Roll', product_id: 3,
-        planned_quantity: 30, actual_quantity: null, wastage_quantity: 0,
-        status: 'planned', started_at: null, completed_at: null
-        },
-    ])
-
-      // GETTERS
-    const totalBatches = computed(() => batches.value.length)
-    const doneBatches = computed(() => batches.value.filter(b => b.status === 'done').length)
-    const inProgressBatches = computed(() =>
-        batches.value.filter(b => ['mixing', 'baking', 'cooling'].includes(b.status)).length
-    )
-
-    function advanceBatch(batchId) {
-        const batch = batches.value.find(b => b.id === batchId)
-        if (!batch) return
-
-        // If entering 'mixing', deduct stock (simplified)
-        if (newStatus === 'mixing') {
-            const ingredientStore = useIngredientStore()
-            try {
-                // Simplified: deduct 0.5kg flour per unit for White Bread
-                // In reality, this reads from RECIPE_ITEMS (the BOM)
-                ingredientStore.deductStock(1, batch.planned_quantity * 0.5) // flour
-                batch.started_at = new Date().toISOString()
-            } catch (err) {
-                alert(err.message)
-                return // Don't advance if stock insufficient
-            }
-        }
-
-        batch.status = newStatus
-
-        if (newStatus === 'done') {
-            batch.completed_at = new Date().toISOString()
-        }
+  async function fetchBatches() {
+    isLoading.value = true
+    error.value = null
+    try {
+      const response = await api.get('/batches')
+      batches.value = response.data
+    } catch (err) {
+      error.value = 'Failed to load batches'
+    } finally {
+      isLoading.value = false
     }
+  }
 
-    return {
-        batches, totalBatches, doneBatches, inProgressBatches,
-        advanceBatch,
+  async function advanceBatch(batchId) {
+    try {
+      const response = await api.patch(`/batches/${batchId}/advance`)
+      // Replace the batch in the array with the updated one
+      const index = batches.value.findIndex(b => b.id === batchId)
+      if (index !== -1) batches.value[index] = response.data
+      return response.data
+    } catch (err) {
+      // Show the server error message (e.g., "Insufficient Wheat Flour")
+      const message = err.response?.data?.message || 'Failed to advance batch'
+      alert(message)
+      throw err
     }
+  }
 
-})    
+  async function createBatch(productId, plannedQuantity) {
+    try {
+      const response = await api.post('/batches', {
+        product_id: productId,
+        planned_quantity: plannedQuantity,
+      })
+      batches.value.push(response.data)
+      return response.data
+    } catch (err) {
+      throw err
+    }
+  }
+
+  return {
+    batches, isLoading, error,
+    totalBatches, doneBatches, inProgressBatches,
+    fetchBatches, advanceBatch, createBatch,
+  }
+})

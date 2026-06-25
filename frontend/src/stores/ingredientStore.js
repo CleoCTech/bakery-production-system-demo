@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import api from '../api/axios'
 
 //export the car
 export const useIngredientStore = defineStore('ingredient', () => {
 
     // ==================== STATE ====================
-    // Same data shape as INGREDIENTS table from the ERD
-    // fetchIngredients() will replace this hardcoded data in Week 6
+    // Same data shape as INGREDIENTS table from the ERD.
+    // Seeded as a fallback so the dashboard isn't blank before the first
+    // fetchIngredients() call resolves (or if the API is unreachable).
     const ingredients = ref([
         { id: 1, name: 'Wheat Flour', current_stock: 50, reorder_level: 20, unit: 'kg', cost_per_unit: 100 },
         { id: 2, name: 'Yeast', current_stock: 2, reorder_level: 1, unit: 'kg', cost_per_unit: 800 },
@@ -37,6 +39,24 @@ export const useIngredientStore = defineStore('ingredient', () => {
 
     // const needsReorder = computed(() => lowStockItems.value.length > 0)
 
+    // FETCH all ingredients from the database (GET /api/ingredients).
+    // On failure we keep whatever data is already in `ingredients` so the
+    // dashboard degrades gracefully instead of going blank.
+    async function fetchIngredients() {
+        isLoading.value = true
+        error.value = null
+        try {
+            const response = await api.get('/ingredients')
+            ingredients.value = response.data
+            return ingredients.value
+        } catch (err) {
+            error.value = 'Failed to load ingredients'
+            console.error('fetchIngredients error:', err)
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     function deductStock(ingredientId, qty) {
         const ingredient = ingredients.value.find(i => i.id === ingredientId)
         if (ingredient) {
@@ -56,5 +76,5 @@ export const useIngredientStore = defineStore('ingredient', () => {
         }
     }
 
-    return { ingredients, isLoading, error, lowStockItems, lowStockCount, totalStockValue, deductStock, addStock }
+    return { ingredients, isLoading, error, lowStockItems, lowStockCount, totalStockValue, fetchIngredients, deductStock, addStock }
 })
