@@ -32,7 +32,7 @@ const statusClass = computed(() => {
     <div class="flex justify-between items-start mb-2">
       <div>
         <span class="font-semibold text-[#1A1A2E] text-sm block">{{ name }}</span>
-        <span class="text-[0.65rem] font-semibold uppercase tracking-wide" :class="statusTextColor">
+        <span class="text-[0.65rem] font-semibold uppercase tracking-wide" :class="statusColor">
           {{ statusLabel }}
         </span>
       </div>

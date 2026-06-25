@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import StockIndicator from '../components/StockIndicator.vue'
 import BatchCard from '../components/BatchCard.vue'
 import { useIngredientStore } from '../stores/ingredientStore'
@@ -11,16 +11,48 @@ const ingredientStore = useIngredientStore()
 const batchStore = useBatchStore()
 const productStore = useProductStore()
 
-
+// Fetch all data when the page loads.
+// allSettled (not all) so one failing store can't blank the whole dashboard —
+// each section renders whatever data it successfully loaded.
 onMounted(async () => {
-  try
-  {
-    const response = await api.get('health')
-    console.log('API health check response:', response.data)
-  } catch (error) {
-    console.error('Error fetching data:', error)
-  }
+  const results = await Promise.allSettled([
+    productStore.fetchProducts(),
+    ingredientStore.fetchIngredients(),
+    batchStore.fetchBatches(),
+  ])
+
+  results
+    .filter((r) => r.status === 'rejected')
+    .forEach((r) => console.error('Dashboard load error:', r.reason))
 })
+
+// Auto-refresh every 60 seconds (live dashboard)
+
+let refreshInterval
+
+onMounted(() => {
+  refreshInterval = setInterval(async () => {
+    await ingredientStore.fetchIngredients()
+    await batchStore.fetchBatches()
+  }, 60000)
+})
+
+onUnmounted(() => {
+  clearInterval(refreshInterval)
+})
+
+
+// Handle batch advancement — after advancing, re-fetch ingredients
+// because stock may have been deducted on the server
+async function handleAdvanceBatch(batchId) {
+  try {
+    await batchStore.advanceBatch(batchId)
+    // Re-fetch ingredients to show updated stock levels
+    await ingredientStore.fetchIngredients()
+  } catch (err) {
+    // Error already handled in batchStore (shows alert)
+  }
+}
 
 
 </script>
@@ -37,7 +69,7 @@ onMounted(async () => {
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Inventory Value</p>
-        <p class="text-2xl font-bold text-[#1A1A2E] mt-1">KES {{ ingredientStore.totalValue }}</p>
+        <p class="text-2xl font-bold text-[#1A1A2E] mt-1">KES {{ ingredientStore.totalStockValue }}</p>
       </div>
      <div class="bg-white rounded-xl p-4 shadow-sm text-center">
         <span class="block text-3xl font-bold text-[#1A1A2E]">{{ productStore.productCount }}</span>
@@ -65,7 +97,7 @@ onMounted(async () => {
       </div>
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-xs font-medium uppercase tracking-wide text-gray-400">In Progress</p>
-        <p class="text-2xl font-bold text-blue-600 mt-1">{{ batchStore.inProgressCount }}</p>
+        <p class="text-2xl font-bold text-blue-600 mt-1">{{ batchStore.inProgressBatches }}</p>
       </div>
       <!-- <div
         class="bg-white rounded-xl p-4 shadow-sm border col-span-2 sm:col-span-1"
@@ -103,60 +135,12 @@ onMounted(async () => {
         v-for="batch in batchStore.batches"
         :key="batch.id"
         :batch="batch"
-        @advance-batch="batchStore.advanceBatch"
+        @advance-batch="handleAdvanceBatch"
       />
     </div>
 
-    <!-- Completion panel (Task 3) -->
-    <!-- <div v-if="completingBatch"
-         class="mt-4 bg-white rounded-xl p-5 shadow-sm border border-blue-200">
-      <h3 class="text-base font-semibold text-[#1A1A2E]">
-        Complete batch — {{ completingBatch.product_name }}
-      </h3>
-      <p class="text-sm text-gray-500 mt-1 mb-4">
-        Record the actual output and wastage to finish this batch
-        (planned {{ completingBatch.planned_quantity }} units).
-      </p>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <label class="flex flex-col gap-1 text-sm">
-          <span class="font-medium text-gray-700">Actual quantity</span>
-          <input
-            v-model.number="completionForm.actual"
-            type="number"
-            min="0"
-            class="px-3 py-2 border border-gray-300 rounded-lg text-sm
-                   focus:outline-none focus:border-[#E8541E] focus:ring-2 focus:ring-orange-100 transition"
-          >
-        </label>
-        <label class="flex flex-col gap-1 text-sm">
-          <span class="font-medium text-gray-700">Wastage</span>
-          <input
-            v-model.number="completionForm.wastage"
-            type="number"
-            min="0"
-            class="px-3 py-2 border border-gray-300 rounded-lg text-sm
-                   focus:outline-none focus:border-[#E8541E] focus:ring-2 focus:ring-orange-100 transition"
-          >
-        </label>
-      </div>
-
-      <div class="flex gap-2 mt-4">
-        <button
-          @click="confirmCompletion"
-          class="py-2 px-5 bg-[#1A1A2E] text-white rounded-lg text-sm font-medium
-                 hover:bg-[#E8541E] transition-colors"
-        >
-          Confirm
-        </button>
-        <button
-          @click="cancelCompletion"
-          class="py-2 px-5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium
-                 hover:bg-gray-200 transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
-    </div> -->
+    <div v-if="batchStore.batches.length === 0" class="text-center py-8 text-gray-400">
+        No production batches today. Plan a new batch to get started.
+    </div>
   </div>
 </template>

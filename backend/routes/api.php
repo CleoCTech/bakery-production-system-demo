@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BatchController;
+use App\Http\Controllers\Api\IngredientController;
 use App\Http\Controllers\Api\ProductController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -48,12 +50,21 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     // Only admins can create/update/delete products
     Route::apiResource('products', ProductController::class);
+    Route::apiResource('batches', BatchController::class);
+
+    Route::patch('/batches/{batch}/advance', [BatchController::class, 'advance']);
+    Route::patch('/batches/{batch}/complete', [BatchController::class, 'complete']);
+
     // Add more protected routes here
 });
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    // Read-only ingredient stock — needed by the dashboard for every role
+    Route::get('/ingredients', [IngredientController::class, 'index']);
+    Route::get('/ingredients/{ingredient}', [IngredientController::class, 'show']);
 });
 
 

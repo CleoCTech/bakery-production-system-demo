@@ -23,9 +23,12 @@ class Ingredient extends Model
     protected $guarded = [];   // allow mass assignment for all fields (for simplicity)
 
     // Type casting: ensures PHP receives correct types
+    // Cast the real decimal columns to float so they serialize as JSON numbers
+    // (not strings), keeping the frontend's numeric stock logic sound.
     protected $casts = [
-        'unit_cost' => 'decimal:2',
-        'is_active' => 'boolean',
+        'current_stock' => 'float',
+        'reorder_level' => 'float',
+        'cost_per_unit' => 'float',
     ];
 
     // ==================== RELATIONSHIPS ====================
